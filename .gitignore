@@ -15,3 +15,6 @@ __pycache__/
 data/*
 !data/.gitkeep
 logs/
+
+# Local tests
+run_test.py
