@@ -18,3 +18,12 @@ logs/
 
 # Local tests
 run_test.py
+test_models.py
+test_vision.py
+
+# Тестовые данные и образцы
+tests/samples/
+*.png
+*.jpg
+*.jpeg
+*.pdf
