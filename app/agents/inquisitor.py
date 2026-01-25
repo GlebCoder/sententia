@@ -50,3 +50,31 @@ class Inquisitor:
         )
 
         return response.text
+    
+    def rank_and_optimize(self, notes: List[StructuredNote]) -> str:
+        """
+        Ranks notes from best to worst and suggests ticker improvements.
+        """
+        context = "\n".join([
+            f"- {n.issuer_bank}: Assets={[a.ticker for a in n.underlying_assets]}, "
+            f"Coupon={n.coupon_rate_annual*100}%, Barrier={n.barrier_level*100}%"
+            for n in notes
+        ])
+
+        prompt = (
+            "You are a Senior Portfolio Manager. Analyze these 4 structured notes:\n"
+            f"{context}\n\n"
+            "TASK:\n"
+            "1. RANKING: List the notes from 'Best Risk-Reward' to 'Worst'. Explain why.\n"
+            "2. CRITIQUE: For the worst notes, explain why they are dangerous (e.g., the 125% barrier).\n"
+            "3. OPTIMIZATION: Suggest 2-3 specific ticker changes. "
+            "For example, if a note is too risky, suggest a more stable stock or ETF in the same sector.\n"
+            "4. VERDICT: Give a final recommendation on which one to buy, if any.\n\n"
+            "Format the output clearly using Markdown for the ranking list."
+        )
+
+        response = self.client.models.generate_content(
+            model=self.model_id,
+            contents=prompt
+        )
+        return response.text
