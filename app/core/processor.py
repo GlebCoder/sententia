@@ -1,5 +1,6 @@
 import os
 import json
+import streamlit as st
 from PIL import Image
 from google import genai
 from dotenv import load_dotenv
@@ -8,28 +9,39 @@ from typing import Union, List
 # English comment: Importing our robust Pydantic model
 from app.models.note import StructuredNote
 
-# Load environment variables
 load_dotenv()
 
 class NoteProcessor:
-    """
-    Core engine for extracting structured financial data from documents.
-    Uses a manual schema and normalization logic to ensure data accuracy.
-    """
     def __init__(self):
-        # English comment: Securely fetch API key from environment
-        api_key = os.getenv("GOOGLE_API_KEY")
+        """
+        Initialize the processor with a secure API key lookup.
+        """
+        # English comment: Securely check for secrets without triggering StreamlitSecretNotFoundError
+        api_key = None
+        
+        # 1. Try Streamlit Secrets (for Cloud Deployment)
+        try:
+            if "GOOGLE_API_KEY" in st.secrets:
+                api_key = st.secrets["GOOGLE_API_KEY"]
+        except Exception:
+            # English comment: Secrets not available (standard for local run)
+            pass
+            
+        # 2. Try Environment Variables (for Local Development via .env)
         if not api_key:
-            raise ValueError("GOOGLE_API_KEY not found in environment variables")
+            api_key = os.getenv("GOOGLE_API_KEY")
+            
+        if not api_key:
+            raise ValueError("GOOGLE_API_KEY not found. Please set it in Streamlit Secrets or your .env file.")
         
         self.client = genai.Client(api_key=api_key)
         self.model_id = "gemini-2.0-flash"
 
     def parse_note(self, source: Union[str, Image.Image]) -> List[StructuredNote]:
         """
-        Extracts every row from a table and normalizes financial percentages.
+        Extracts table rows and normalizes financial percentages using proven logic.
         """
-        # English prompt: Strict mechanical instructions
+        # English prompt: Mechanical instructions for data extraction
         prompt = (
             "Extract all rows from the table in the image. "
             "Return a JSON object with a key 'notes' which is a list of investment objects. "
@@ -39,7 +51,7 @@ class NoteProcessor:
             "IMPORTANT: If a value is 8%, return 0.08. If a value is 100%, return 1.0."
         )
 
-        # English comment: Manual schema definition to prevent Pydantic/Gemini naming conflicts
+        # English comment: JSON schema to guide the AI's response structure
         schema = {
             "type": "object",
             "properties": {
@@ -86,14 +98,14 @@ class NoteProcessor:
             
             final_notes = []
             for n in raw_notes:
-                # English comment: Percentage Normalization Logic
-                # Prevents 8.0% from becoming 8.0 or 800.0
+                # English comment: Percentage Normalization Safety Logic
+                # Ensures 8.0% becomes 0.08 even if the AI outputs 8.0
                 for field in ["coupon_rate_annual", "barrier_level"]:
                     val = n.get(field, 0)
-                    if val > 2.0: # If value is e.g. 8.0 or 100.0
+                    if val > 2.0: 
                         n[field] = val / 100.0
+                    # Safety check specifically for coupons
                     if n[field] > 1.0 and field == "coupon_rate_annual":
-                        # Safety check: coupons are rarely > 100%
                         n[field] = n[field] / 100.0
 
                 # English comment: Map to Pydantic model for final validation
@@ -102,6 +114,7 @@ class NoteProcessor:
             return final_notes
 
         except Exception as e:
-            # English comment: Log the raw response if parsing fails
-            print(f"CRITICAL DATA ERROR: {response.text}")
+            # English comment: Display the raw response in UI to help debugging
+            st.error(f"Critical Data Error: {e}")
+            print(f"RAW AI RESPONSE: {response.text}")
             raise e

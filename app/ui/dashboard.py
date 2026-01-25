@@ -93,7 +93,9 @@ if st.session_state.notes:
                     risk_score = 3
                     if note.barrier_level > 1.0: risk_score += 4
                     if len(note.underlying_assets) > 2: risk_score += 2
-                    st.plotly_chart(create_risk_gauge(risk_score, "Risk Level"), use_container_width=True)
+                    
+                    # English comment: Using 'width="stretch"' to comply with 2026 standards
+                    st.plotly_chart(create_risk_gauge(risk_score, "Risk Level"), width="stretch")
 
     st.divider()
 
@@ -130,7 +132,7 @@ with col_chat:
             # Logic: If no notes exist, treat input as data ingestion. Else, follow-up.
             if st.session_state.notes is None:
                 with st.spinner("Analyzing text for financial data..."):
-                    # Process text input
+                    # English comment: Use the Inquisitor's client for chat processing
                     response = inquisitor.client.models.generate_content(
                         model=inquisitor.model_id,
                         contents=f"The user has provided text instead of an image. "
@@ -139,7 +141,7 @@ with col_chat:
                     )
             else:
                 with st.spinner("Thinking..."):
-                    # Process follow-up question
+                    # English comment: Use stored context for relevant answers
                     response = inquisitor.client.models.generate_content(
                         model=inquisitor.model_id,
                         contents=f"Context: {st.session_state.notes}\nUser Question: {prompt}\n"
